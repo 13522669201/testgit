@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>H5playerVue</title>
+  <link rel="stylesheet" href="./static/css/antd.min.css">
+  <style>
+    body {
+      padding: 0px;
+      margin: 0px;
+    }
+
+    #app {
+      display: none;
+    }
+
+    #player {
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div id="player"></div>
+  </div>
+  <script src="./static/js/moment.js"></script>
+  <script src="./static/js/vue.js"></script>
+  <script src="./static/js/antd.min.js"></script>
+  <script src="./static/js/antd-with-locales.min.js"></script>
+  <script src="./h5player.min.js"></script>
+  <script>
+    const { LocaleProvider, locales } = window.antd
+    moment.locale('./static/js/zh-cn.js')
+
+    const IS_MOVE_DEVICE = document.body.clientWidth < 992 // 是否移动设备
+    const MSE_IS_SUPPORT = !!window.MediaSource // 是否支持mse
+
+    const app = new Vue({
+      el: '#app',
+      // components: { Log },
+      data() {
+        return {
+          zh_CN: locales.zh_CN,
+          isMoveDevice: IS_MOVE_DEVICE,
+          player: null,
+          splitNum: 1,
+          mseSupport: MSE_IS_SUPPORT,
+          tabActive: 'decoder',
+          labelCol: { span: 5 },
+          wrapperCol: { span: 18 },
+          urls: {
+            realplay: 'ws://218.21.0.30:26014/openUrl/d9Sp1u0',
+            talk: 'wss://10.41.163.126:6014/proxy/10.41.163.126:559/EUrl/6gFx47S',
+            playback: 'wss://10.41.163.126:6014/proxy/10.41.163.126:559/EUrl/6gFx47S'
+          },
+          playback: {
+            startTime: '2021-07-26T00:00:00',
+            endTime: '2021-07-26T23:59:59',
+            valueFormat: moment.HTML5_FMT.DATETIME_LOCAL_SECONDS,
+            seekStart: '2021-07-26T12:00:00',
+            rate: ''
+          },
+          muted: true,
+          volume: 50,
+          volumeOnSvg: {
+            template: '<svg t="1624453273744" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1421" width="200" height="200"><path d="M597.994667 138.005333q130.005333 28.010667 213.994667 132.992t84.010667 241.002667-84.010667 241.002667-213.994667 132.992l0-88q93.994667-28.010667 153.002667-106.005333t59.008-180.010667-59.008-180.010667-153.002667-106.005333l0-88zM704 512q0 120-106.005333 172.010667l0-344q106.005333 52.010667 106.005333 172.010667zM128 384l170.005333 0 213.994667-213.994667 0 684.010667-213.994667-213.994667-170.005333 0 0-256z" p-id="1422"></path></svg>'
+          },
+          volumeOffSvg: {
+            template: '<svg t="1624453193279" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="9147" width="200" height="200"><path d="M512 170.005333l0 180.010667-90.005333-90.005333zM181.994667 128l714.005333 714.005333-53.994667 53.994667-88-88q-74.005333 58.005333-156.010667 77.994667l0-88q50.005333-13.994667 96-50.005333l-181.994667-181.994667 0 288-213.994667-213.994667-170.005333 0 0-256 202.005333 0-202.005333-202.005333zM810.005333 512q0-101.994667-59.008-180.010667t-153.002667-106.005333l0-88q130.005333 28.010667 213.994667 132.992t84.010667 241.002667q0 96-44.010667 178.005333l-64-66.005333q21.994667-53.994667 21.994667-112zM704 512q0 18.005333-2.005333 26.005333l-104-104 0-93.994667q106.005333 52.010667 106.005333 172.010667z" p-id="9148"></path></svg>'
+          }
+        }
+      },
+      computed: {
+        mode: function () {
+          return this.tabActive === 'mse' ? 0 : 1
+        }
+      },
+      methods: {
+        init() {
+          // 设置播放容器的宽高并监听窗口大小变化
+          window.addEventListener('resize', () => {
+            this.player.JS_Resize()
+          })
+        },
+        createPlayer() {
+          this.player = new window.JSPlugin({
+            szId: 'player',
+            szBasePath: "./",
+            iMaxSplit: 4,
+            // iCurrentSplit: IS_MOVE_DEVICE ? 1 : 2,
+            iCurrentSplit: 1,
+            openDebug: true,
+            oStyle: {
+              borderSelect: IS_MOVE_DEVICE ? '#000' : '#FFCC00',
+            }
+          })
+
+          // 事件回调绑定
+          this.player.JS_SetWindowControlCallback({
+            windowEventSelect: function (iWndIndex) {  //插件选中窗口回调
+              console.log('windowSelect callback: ', iWndIndex);
+            },
+            pluginErrorHandler: function (iWndIndex, iErrorCode, oError) {  //插件错误回调
+              console.log('pluginError callback: ', iWndIndex, iErrorCode, oError);
+            },
+            windowEventOver: function (iWndIndex) {  //鼠标移过回调
+              //console.log(iWndIndex);
+            },
+            windowEventOut: function (iWndIndex) {  //鼠标移出回调
+              //console.log(iWndIndex);
+            },
+            windowEventUp: function (iWndIndex) {  //鼠标mouseup事件回调
+              //console.log(iWndIndex);
+            },
+            windowFullCcreenChange: function (bFull) {  //全屏切换回调
+              console.log('fullScreen callback: ', bFull);
+            },
+            firstFrameDisplay: function (iWndIndex, iWidth, iHeight) {  //首帧显示回调
+              console.log('firstFrame loaded callback: ', iWndIndex, iWidth, iHeight);
+            },
+            performanceLack: function () {  //性能不足回调
+              console.log('performanceLack callback: ');
+            }
+          });
+          this.realplay(window.location.search.replace("?", ""))
+        },
+        /* 预览&对讲 */
+        realplay(val) {
+          let { player, mode, urls } = this,
+            index = player.currentWindowIndex,
+            playURL = val
+
+          player.JS_Play(playURL, { playURL, mode }, index).then(
+            () => { console.log('realplay success') },
+            e => { console.error(e) }
+          )
+        },
+        getQueryString(name) {
+          var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+          var r = window.location.search.substr(1).match(reg);
+          if (r != null) return unescape(r[2]);
+          return null;
+        }
+      },
+      mounted() {
+        this.$el.style.setProperty('display', 'block')
+        this.init()
+        this.createPlayer()
+      }
+    })
+  </script>
+</body>
+
+</html>
